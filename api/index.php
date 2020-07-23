@@ -5,108 +5,69 @@ preg_match("|" . dirname($_SERVER["SCRIPT_NAME"]) . "/([\w%/]*)|", $_SERVER["REQ
 $paths = explode("/", $matches[1]);
 $id = isset($paths[1]) ? htmlspecialchars($paths[1]) : null;
 header("Content-Type: application/json");
+// header("Access-Control-Allow-Origin: https://tkgstrator.github.io");
 header("Access-Control-Allow-Origin: *");
 switch (strtolower($_SERVER["REQUEST_METHOD"]) . ":" . $paths[0]) {
     case "post:session_token":
         $body = json_decode(file_get_contents("php://input"), true);
-        try {
-            $session_token_code = $body["session_token_code"];
-            $session_token_code_verifier = $body["session_token_code_verifier"];
-            $message = getSessionToken($session_token_code, $session_token_code_verifier);
-        } catch (Exception $e) {
-            $message = json_encode(array(
-                "error" => "invalid_request",
-                "error_description" => "The request does not satisfy the schema",
-            ));
-        }
+        $session_token_code = $body["session_token_code"];
+        $session_token_code_verifier = $body["session_token_code_verifier"];
+        $message = getSessionToken($session_token_code, $session_token_code_verifier);
         echo ($message);
         break;
     case "post:access_token":
         $body = json_decode(file_get_contents("php://input"), true);
-        try {
-            $session_token = $body["session_token"];
-            // $message = $session_token;
-            $message = getAccessToken($session_token);
-        } catch (Exception $e) {
-            $message = json_encode(array(
-                "error" => "invalid_request",
-                "error_description" => "The request does not satisfy the schema",
-            ));
-        }
+        $session_token = $body["session_token"];
+        $message = getAccessToken($session_token);
         echo ($message);
         break;
     case "post:splatoon_token":
         $body = json_decode(file_get_contents("php://input"), true);
-        try {
-            // $message = $body["f"];
-            $message = getSplatoonToken($body);
-        } catch (Exception $e) {
-            $message = json_encode(array(
-                "error" => "invalid_request",
-                "error_description" => "The request does not satisfy the schema",
-            ));
-        }
+        $message = getSplatoonToken($body);
+        echo ($message);
+        break;
+    case "post:splatoon_access_token":
+        $body = json_decode(file_get_contents("php://input"), true);
+        $flapg_app = $body["parameter"];
+        $splatoon_token = $body["splatoon_token"];
+        $message = getSplatoonAccessToken($flapg_app, $splatoon_token);
+        echo ($message);
+        break;
+    case "post:iksm_session":
+        $body = json_decode(file_get_contents("php://input"), true);
+        $splatoon_access_token = $body["splatoon_access_token"];
+        $message = getIksmSession($splatoon_access_token);
+        echo ($message);
+        break;
+    case "post:gen2":
+        $body = json_decode(file_get_contents("php://input"), true);
+        $access_token = $body["access_token"];
+        $timestamp = time();
+        $message = callS2SAPI($access_token, $timestamp);
         echo ($message);
         break;
     case "post:login":
         $body = json_decode(file_get_contents("php://input"), true);
-        try {
-            $type = $body["type"];
-            $access_token = $body["access_token"];
-            $message = callFlapgAPI($access_token, $type);
-        } catch (Exception $e) {
-            $message = json_encode(array(
-                "error" => "invalid_request",
-                "error_description" => "The request does not satisfy the schema",
-            ));
-        }
+        $type = $body["type"];
+        $access_token = $body["access_token"];
+        // echo $access_token;
+        $message = callFlapgAPI($access_token, $type);
         echo ($message);
         break;
-    case "post:account":
+    case "post:timeline": // ホーム画面の情報
+    case "post:nickname_and_icon": // 現在のニックネームとアイコン
+    case "post:stages": // ステージ情報
+    case "post:hero": // ヒーローモード
+    case "post:records": // 塗りポイントなど
+    case "post:results": // バトルの履歴
+    case "post:schedules": // スケジュール
+    case "post:coop_results": // サーモンランの履歴
         $body = json_decode(file_get_contents("php://input"), true);
-        try {
-            $access_token = $body["f"];
-            $timestamp = time();
-            // $message =  $access_token;
-            $message = callS2SAPI($access_token, $timestamp);
-        } catch (Exception $e) {
-            $message = json_encode(array(
-                "error" => "invalid_request",
-                "error_description" => "The request does not satisfy the schema",
-            ));
-        }
-        echo ($message);
-        break;
-    case "post:iksm_session":
-        break;
-    case "post:private":
-        $body = json_decode(file_get_contents("php://input"), true);
-        try {
-            $session_token_code = $body["session_token_code"];
-            $session_token_code_verifier = $body["session_token_code_verifier"];
-            $session_token = getSessionToken($session_token_code, $session_token_code_verifier);
-            $access_token = getAccessToken($session_token);
-            $flapg_nso = callFlapgAPI($access_token, "nso");
-            $splatoon_token = getSplatoonToken($flapg_nso);
-            $flapg_app = callFlapgAPI($splatoon_token, "app");
-            $splatoon_access_token = getSplatoonAccessToken($flapg_app);
-            $iksm_session = getIksmSession($splatoon_access_token);
-            $message = json_encode(array(
-                "iksm_session" => $iksm_session
-            ));
-        } catch (Exception $e) {
-            $message = json_encode(array(
-                "error" => "invalid_request",
-                "error_description" => "The request does not satisfy the schema",
-            ));
-        }
-        echo ($message);
+        $iksm_session = $body["iksm_session"];
+        $message = getResults($iksm_session, $matches[1]);
         break;
     default:
-        $message = array(
-            "error" => "Only POST allowed"
-        );
         http_response_code(405);
-        echo (json_encode($message));
+        echo (json_encode(array("from" => "salmonia api", "error" => "invalid_protocol", "Salmonia api allowed only post request")));
         break;
 }
