@@ -196,7 +196,7 @@ function getSplatoonToken($flapg_nso)
         CURLOPT_HTTPHEADER => array(
             "Host: api-lp1.znc.srv.nintendo.net",
             "Accept: */*",
-            "X-ProductVersion: 1.6.1.2",
+            "X-ProductVersion: 1.8.0",
             "Accept-Language: en-US",
             "Content-Type: application/json",
             "Connection: keep-alive",
@@ -248,7 +248,7 @@ function getSplatoonAccessToken($flapg_app, $splatoon_token)
         CURLOPT_HTTPHEADER => array(
             "Host: api-lp1.znc.srv.nintendo.net",
             "Accept: */*",
-            "X-ProductVersion: 1.6.1.2",
+            "X-ProductVersion: 1.8.0",
             "Accept-Language: en-US",
             "Content-Type: application/json",
             "Connection: keep-alive",
@@ -283,7 +283,7 @@ function getIksmSession($splatoon_access_token)
         CURLOPT_ENCODING => "",
         CURLOPT_MAXREDIRS => 10,
         CURLOPT_TIMEOUT => 0,
-        CURLOPT_NOBODY => true,
+        // CURLOPT_NOBODY => true,
         CURLOPT_HEADER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
@@ -296,12 +296,15 @@ function getIksmSession($splatoon_access_token)
 
     $response = curl_exec($curl);
     curl_close($curl);
-    preg_match_all("/^Set-Cookie: ([^;\r\n]+)/mi", $response, $matches);
-    $cookies = implode("; ", $matches[1]);
-    $iksm_session = array(
-        "iksm_session" => substr($cookies, 13, 40)
+    preg_match("/data-unique-id=\"[0-9]{20}/", $response, $uid);
+    preg_match("/data-nsa-id=[a-z0-9]{16}/", $response, $nsaid);
+    preg_match("/iksm_session=[a-z0-9]{40}/", $response, $cookie);
+    $response = array(
+        "uid" => substr($uid[0], 16, 20),
+        "nsaid" => substr($nsaid[0], 12, 16),
+        "iksm_session" => substr($cookie[0], 13, 40)
     );
-    echo json_encode($iksm_session);
+    return json_encode($response);
 }
 
 function getResults($iksm_session, $id)

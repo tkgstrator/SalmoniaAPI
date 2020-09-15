@@ -1,5 +1,7 @@
 <?php
 require_once("splatnet2.php");
+require_once("arm2hex.php");
+require_once("lanplay.php");
 
 preg_match("|" . dirname($_SERVER["SCRIPT_NAME"]) . "/([\w%/]*)|", $_SERVER["REQUEST_URI"], $matches);
 $paths = explode("/", $matches[1]);
@@ -37,7 +39,7 @@ switch (strtolower($_SERVER["REQUEST_METHOD"]) . ":" . $paths[0]) {
         $body = json_decode(file_get_contents("php://input"), true);
         $splatoon_access_token = $body["splatoon_access_token"];
         $message = getIksmSession($splatoon_access_token);
-        echo ($message);
+        print_r($message);
         break;
     case "post:gen2":
         $body = json_decode(file_get_contents("php://input"), true);
@@ -65,9 +67,26 @@ switch (strtolower($_SERVER["REQUEST_METHOD"]) . ":" . $paths[0]) {
         $body = json_decode(file_get_contents("php://input"), true);
         $iksm_session = $body["iksm_session"];
         $message = getResults($iksm_session, $matches[1]);
+        echo ($message);
+        break;
+    case "get:lanplay":
+        $message = getLanPlayServerList($iksm_session, $matches[1]);
+        echo ($message);
+        break;
+    case "get:convert":
+        $body = [65551, 65559, 65565];
+        // $body = json_decode(file_get_contents("php://input"), true);
+        $message = convert($body);
+        echo ($message);
+        break;
+    case "post:convert":
+        $body = json_decode(file_get_contents("php://input"), true);
+        $seeds = $body["seeds"];
+        $message = convert($seeds);
+        echo ($message);
         break;
     default:
         http_response_code(405);
-        echo (json_encode(array("from" => "salmonia api", "error" => "invalid_protocol", "Salmonia api allowed only post request")));
+        // echo (json_encode(array("from" => "salmonia api", "error" => "invalid_protocol", "Salmonia api allowed only post request")));
         break;
 }
